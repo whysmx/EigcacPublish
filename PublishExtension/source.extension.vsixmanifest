@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Vsix xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+      xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011"
+      Version="1.0.0">
+  <Identifier Id="PublishExtension.7154A2F0-BBA8-4683-8250-B76CC5B591F0">
+    <Name>发布</Name>
+    <Author>Eigcac</Author>
+    <Version>1.0</Version>
+    <Description xml:space="preserve">拉取 TFS 最新代码并发布 Eigcac.Main 和 Eigcac.BSServer。</Description>
+    <Locale>zh-CN</Locale>
+  </Identifier>
+  <Installation>
+    <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[16.0,19.0)" />
+    <InstallationTarget Id="Microsoft.VisualStudio.Professional" Version="[16.0,19.0)" />
+    <InstallationTarget Id="Microsoft.VisualStudio.Enterprise" Version="[16.0,19.0)" />
+  </Installation>
+  <Dependencies>
+    <Dependency Id="Microsoft.Framework.NDP" DisplayName=".NET Framework" Version="[4.7.2,)" />
+  </Dependencies>
+  <Prerequisites>
+    <Prerequisite Id="Microsoft.VisualStudio.Component.CoreEditor" Version="[16.0,)" DisplayName="Visual Studio core editor" />
+  </Prerequisites>
+  <Assets>
+    <Asset Type="Microsoft.VisualStudio.VsPackage" d:Source="Project" Path="|PublishExtension|" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011" />
+  </Assets>
+</Vsix>

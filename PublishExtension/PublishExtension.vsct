@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CommandTable xmlns="http://schemas.microsoft.com/VisualStudio/2005-10-18/CommandTable">
+  <Extern href="stdidcmd.h" />
+  <Extern href="vsshlids.h" />
+
+  <Commands package="guidPublishExtensionPackage">
+    <Groups>
+      <Group guid="guidPublishExtensionPackageCmdSet" id="MyMenuGroup" priority="0x0600">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_MENU_TOOLS" />
+      </Group>
+    </Groups>
+
+    <Buttons>
+      <Button guid="guidPublishExtensionPackageCmdSet" id="PublishCommandId" priority="0x0100" type="Button">
+        <Parent guid="guidPublishExtensionPackageCmdSet" id="MyMenuGroup" />
+        <Icon guid="guidImages" id="PublishIcon" />
+        <Strings>
+          <ButtonText>发布</ButtonText>
+        </Strings>
+      </Button>
+    </Buttons>
+
+    <Bitmaps>
+      <Bitmap guid="guidImages" href="Resources\PublishCommand.png" usedList="PublishIcon" />
+    </Bitmaps>
+  </Commands>
+
+  <Symbols>
+    <GuidSymbol name="guidPublishExtensionPackage" value="{F0836E0B-8B15-4D6D-A73F-37E4A7B31EB9}" />
+    <GuidSymbol name="guidPublishExtensionPackageCmdSet" value="{03000478-B1B7-4E82-9211-4A682BE19A8C}">
+      <IDSymbol name="MyMenuGroup" value="0x1020" />
+      <IDSymbol name="PublishCommandId" value="0x0100" />
+    </GuidSymbol>
+    <GuidSymbol name="guidImages" value="{737E1A95-5622-4855-9870-83A28649C0BD}">
+      <IDSymbol name="PublishIcon" value="1" />
+    </GuidSymbol>
+  </Symbols>
+</CommandTable>

@@ -1,0 +1,15 @@
+# Build outputs
+bin/
+obj/
+.vs/
+*.user
+*.suo
+*.cache
+*.vsix
+
+# OS
+.DS_Store
+
+# IDE
+*.userosscache
+*.sln.docstates
