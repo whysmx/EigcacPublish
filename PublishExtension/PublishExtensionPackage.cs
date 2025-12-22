@@ -68,7 +68,7 @@ namespace PublishExtension
         private static void LogCommandName(IVsCmdNameMapping mapping, Guid guid, int id)
         {
             var cmdGuid = guid;
-            var hr = mapping.MapGUIDIDToName(ref cmdGuid, (uint)id, VSCMDNAMEOPTS.VSCMDNAMEOPTS_Default, out var name);
+            var hr = mapping.MapGUIDIDToName(ref cmdGuid, (uint)id, VSCMDNAMEOPTS.CNO_GETBOTH, out var name);
             ActivityLog.LogInformation("PublishExtension", $"命令映射: {guid} {id} hr=0x{hr:X8} name={name ?? "<null>"}");
         }
     }
