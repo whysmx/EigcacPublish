@@ -2,7 +2,7 @@ using System;
 using System.ComponentModel.Design;
 using System.Diagnostics;
 using System.IO;
-using System.Threading.Tasks;
+using Task = System.Threading.Tasks.Task;
 using System.Windows.Forms;
 using EnvDTE80;
 using Microsoft.VisualStudio;
