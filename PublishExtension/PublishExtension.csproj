@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="source.extension.vsixmanifest" />
+    <VsixManifest Include="source.extension.vsixmanifest" />
     <VSCTCompile Include="PublishExtension.vsct" />
     <None Include="Resources\PublishCommand.png" />
   </ItemGroup>
