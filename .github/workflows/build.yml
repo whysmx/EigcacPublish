@@ -33,7 +33,7 @@ jobs:
             $version = $env:GITHUB_REF_NAME.Substring(1)
           }
           [xml]$xml = Get-Content "PublishExtension/source.extension.vsixmanifest"
-          $xml.Vsix.Identifier.Version = $version
+          $xml.PackageManifest.Metadata.Identity.Version = $version
           $xml.Save("PublishExtension/source.extension.vsixmanifest")
           Write-Host "VSIX version set to $version"
 
