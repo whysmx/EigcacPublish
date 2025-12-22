@@ -23,6 +23,13 @@ namespace PublishExtension
         {
             await base.InitializeAsync(cancellationToken, progress);
             await PublishCommand.InitializeAsync(this);
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            var outputWindow = await GetServiceAsync(typeof(SVsOutputWindow)) as IVsOutputWindow;
+            if (outputWindow != null)
+            {
+                var paneGuid = new Guid("9C47EA07-7688-4A7C-B2C8-AD5B5B1B2521");
+                outputWindow.CreatePane(ref paneGuid, "Eigcac发布", 1, 1);
+            }
         }
     }
 }

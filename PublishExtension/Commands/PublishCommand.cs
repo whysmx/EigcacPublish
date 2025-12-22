@@ -38,6 +38,7 @@ namespace PublishExtension.Commands
             }
 
             _ = new PublishCommand(package, commandService);
+            await LogOutputAsync(package, "命令已注册：Eigcac发布");
         }
 
         private void Execute(object sender, EventArgs e)
@@ -65,12 +66,14 @@ namespace PublishExtension.Commands
             var dte = await package.GetServiceAsync(typeof(EnvDTE.DTE)) as DTE2;
             if (dte == null)
             {
+                await LogOutputAsync(package, "DTE 服务不可用，无法执行发布。");
                 ShowMessage("无法获取 DTE 服务。", OLEMSGICON.OLEMSGICON_WARNING);
                 return;
             }
 
             if (dte.Solution == null || string.IsNullOrWhiteSpace(dte.Solution.FullName))
             {
+                await LogOutputAsync(package, "未检测到已打开的解决方案。");
                 ShowMessage("请先打开需要发布的解决方案。", OLEMSGICON.OLEMSGICON_WARNING);
                 return;
             }
@@ -85,6 +88,7 @@ namespace PublishExtension.Commands
             var options = (PublishOptions)package.GetDialogPage(typeof(PublishOptions));
             var debugEnabled = options.EnableDebugLogging;
             LogDebug(debugEnabled, $"开始发布，解决方案目录: {solutionDir}");
+            await LogOutputAsync(package, $"开始发布，解决方案目录: {solutionDir}");
 
             var backendProject = Path.Combine(solutionDir, "Eigcac.Main", "Eigcac.Main.csproj");
             var frontendProject = Path.Combine(solutionDir, "Eigcac.BSServer", "Eigcac.BSServer.csproj");
@@ -101,6 +105,7 @@ namespace PublishExtension.Commands
             if (string.IsNullOrWhiteSpace(publishPath))
             {
                 LogDebug(debugEnabled, "发布路径为空，取消发布。");
+                await LogOutputAsync(package, "发布路径为空，已取消。");
                 return;
             }
 
@@ -111,11 +116,13 @@ namespace PublishExtension.Commands
             if (!result.Success)
             {
                 LogDebug(debugEnabled, $"发布失败: {result.Message}");
+                await LogOutputAsync(package, $"发布失败: {result.Message}");
                 ShowMessage(result.Message, OLEMSGICON.OLEMSGICON_CRITICAL);
                 return;
             }
 
             LogDebug(debugEnabled, "发布完成。");
+            await LogOutputAsync(package, "发布完成。");
             ShowMessage("发布完成。", OLEMSGICON.OLEMSGICON_INFO);
         }
 
@@ -346,6 +353,29 @@ namespace PublishExtension.Commands
             catch
             {
                 // Ignore logging errors.
+            }
+        }
+
+        private static async System.Threading.Tasks.Task LogOutputAsync(AsyncPackage package, string message)
+        {
+            if (package == null || string.IsNullOrWhiteSpace(message))
+            {
+                return;
+            }
+
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            var outputWindow = await package.GetServiceAsync(typeof(SVsOutputWindow)) as IVsOutputWindow;
+            if (outputWindow == null)
+            {
+                return;
+            }
+
+            var paneGuid = new Guid("9C47EA07-7688-4A7C-B2C8-AD5B5B1B2521");
+            outputWindow.CreatePane(ref paneGuid, "Eigcac发布", 1, 1);
+            outputWindow.GetPane(ref paneGuid, out var pane);
+            if (pane != null)
+            {
+                pane.OutputStringThreadSafe($"{DateTime.Now:HH:mm:ss} {message}{Environment.NewLine}");
             }
         }
 

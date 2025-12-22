@@ -8,6 +8,12 @@
       <Group guid="guidPublishExtensionPackageCmdSet" id="MyMenuGroup" priority="0x0600">
         <Parent guid="guidSHLMainMenu" id="IDM_VS_MENU_TOOLS" />
       </Group>
+      <Group guid="guidPublishExtensionPackageCmdSet" id="ProjectMenuGroup" priority="0x0600">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_MENU_PROJECT" />
+      </Group>
+      <Group guid="guidPublishExtensionPackageCmdSet" id="SolutionContextGroup" priority="0x0600">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_SOLNNODE" />
+      </Group>
     </Groups>
 
     <Buttons>
@@ -20,15 +26,30 @@
       </Button>
     </Buttons>
 
+    <CommandPlacements>
+      <CommandPlacement guid="guidPublishExtensionPackageCmdSet" id="PublishCommandId" priority="0x0100">
+        <Parent guid="guidPublishExtensionPackageCmdSet" id="ProjectMenuGroup" />
+      </CommandPlacement>
+      <CommandPlacement guid="guidPublishExtensionPackageCmdSet" id="PublishCommandId" priority="0x0100">
+        <Parent guid="guidPublishExtensionPackageCmdSet" id="SolutionContextGroup" />
+      </CommandPlacement>
+    </CommandPlacements>
+
     <Bitmaps>
       <Bitmap guid="guidImages" href="Resources\PublishCommand.png" usedList="PublishIcon" />
     </Bitmaps>
   </Commands>
 
+  <KeyBindings>
+    <KeyBinding guid="guidPublishExtensionPackageCmdSet" id="PublishCommandId" editor="guidVSStd97" key1="CTRL+ALT+P" />
+  </KeyBindings>
+
   <Symbols>
     <GuidSymbol name="guidPublishExtensionPackage" value="{F0836E0B-8B15-4D6D-A73F-37E4A7B31EB9}" />
     <GuidSymbol name="guidPublishExtensionPackageCmdSet" value="{03000478-B1B7-4E82-9211-4A682BE19A8C}">
       <IDSymbol name="MyMenuGroup" value="0x1020" />
+      <IDSymbol name="ProjectMenuGroup" value="0x1021" />
+      <IDSymbol name="SolutionContextGroup" value="0x1022" />
       <IDSymbol name="PublishCommandId" value="0x0100" />
     </GuidSymbol>
     <GuidSymbol name="guidImages" value="{737E1A95-5622-4855-9870-83A28649C0BD}">
