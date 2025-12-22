@@ -7,11 +7,12 @@
     <RootNamespace>PublishExtension</RootNamespace>
     <AssemblyName>PublishExtension</AssemblyName>
     <LangVersion>latest</LangVersion>
+    <VSSDKBuildToolsPath>$(NuGetPackageRoot)microsoft.vssdk.buildtools\17.8.2365\build\</VSSDKBuildToolsPath>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.VisualStudio.SDK" Version="17.7.3310" />
-    <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="17.7.3310">
+    <PackageReference Include="Microsoft.VisualStudio.SDK" Version="17.7.37357" />
+    <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="17.8.2365">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
@@ -28,4 +29,6 @@
   </ItemGroup>
 
   <Import Project="$(VSSDKTargets)" Condition="Exists('$(VSSDKTargets)')" />
+  <Import Project="$(VSSDKBuildToolsPath)Microsoft.VSSDK.BuildTools.targets"
+          Condition="Exists('$(VSSDKBuildToolsPath)Microsoft.VSSDK.BuildTools.targets')" />
 </Project>
