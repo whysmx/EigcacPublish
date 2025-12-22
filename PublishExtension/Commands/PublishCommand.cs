@@ -50,6 +50,8 @@ namespace PublishExtension.Commands
             catch (Exception ex)
             {
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                var options = (PublishOptions)package.GetDialogPage(typeof(PublishOptions));
+                LogDebug(options.EnableDebugLogging, $"执行失败: {ex}");
                 ShowMessage($"执行失败: {ex.Message}", OLEMSGICON.OLEMSGICON_CRITICAL);
             }
         }
@@ -72,8 +74,14 @@ namespace PublishExtension.Commands
                 return;
             }
 
+            var options = (PublishOptions)package.GetDialogPage(typeof(PublishOptions));
+            var debugEnabled = options.EnableDebugLogging;
+            LogDebug(debugEnabled, $"开始发布，解决方案目录: {solutionDir}");
+
             var backendProject = Path.Combine(solutionDir, "Eigcac.Main", "Eigcac.Main.csproj");
             var frontendProject = Path.Combine(solutionDir, "Eigcac.BSServer", "Eigcac.BSServer.csproj");
+            LogDebug(debugEnabled, $"后端项目路径: {backendProject}");
+            LogDebug(debugEnabled, $"前端项目路径: {frontendProject}");
 
             if (!File.Exists(backendProject) || !File.Exists(frontendProject))
             {
@@ -84,18 +92,22 @@ namespace PublishExtension.Commands
             var publishPath = await GetOrPromptPublishPathAsync();
             if (string.IsNullOrWhiteSpace(publishPath))
             {
+                LogDebug(debugEnabled, "发布路径为空，取消发布。");
                 return;
             }
 
-            var result = await Task.Run(() => PublishAll(solutionDir, backendProject, frontendProject, publishPath));
+            LogDebug(debugEnabled, $"发布路径: {publishPath}");
+            var result = await Task.Run(() => PublishAll(solutionDir, backendProject, frontendProject, publishPath, debugEnabled));
 
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             if (!result.Success)
             {
+                LogDebug(debugEnabled, $"发布失败: {result.Message}");
                 ShowMessage(result.Message, OLEMSGICON.OLEMSGICON_CRITICAL);
                 return;
             }
 
+            LogDebug(debugEnabled, "发布完成。");
             ShowMessage("发布完成。", OLEMSGICON.OLEMSGICON_INFO);
         }
 
@@ -142,9 +154,11 @@ namespace PublishExtension.Commands
             string solutionDir,
             string backendProject,
             string frontendProject,
-            string backendPublishPath)
+            string backendPublishPath,
+            bool debugEnabled)
         {
-            var tfsResult = RunProcess("tf", "get /recursive /noprompt", solutionDir);
+            LogDebug(debugEnabled, "开始执行 TFS 更新。");
+            var tfsResult = RunProcess("tf", "get /recursive /noprompt", solutionDir, debugEnabled);
             if (!tfsResult.Success)
             {
                 return PublishResult.Fail($"TFS 更新失败:\n{tfsResult.Message}");
@@ -154,7 +168,8 @@ namespace PublishExtension.Commands
 
             var backendPublishDir = EnsureTrailingSeparator(backendPublishPath);
             var backendArgs = $"publish \"{backendProject}\" -p:PublishProfile={PublishProfileName} -p:PublishDir=\"{backendPublishDir}\"";
-            var backendResult = RunProcess("dotnet", backendArgs, solutionDir);
+            LogDebug(debugEnabled, $"开始发布后端: {backendArgs}");
+            var backendResult = RunProcess("dotnet", backendArgs, solutionDir, debugEnabled);
             if (!backendResult.Success)
             {
                 return PublishResult.Fail($"后端发布失败:\n{backendResult.Message}");
@@ -167,14 +182,17 @@ namespace PublishExtension.Commands
             {
                 var frontendPublishDir = EnsureTrailingSeparator(tempDir);
                 var frontendArgs = $"publish \"{frontendProject}\" -p:PublishProfile={PublishProfileName} -p:PublishDir=\"{frontendPublishDir}\"";
-                var frontendResult = RunProcess("dotnet", frontendArgs, solutionDir);
+                LogDebug(debugEnabled, $"开始发布前端: {frontendArgs}");
+                var frontendResult = RunProcess("dotnet", frontendArgs, solutionDir, debugEnabled);
                 if (!frontendResult.Success)
                 {
                     return PublishResult.Fail($"前端发布失败:\n{frontendResult.Message}");
                 }
 
                 var frontendTarget = Path.Combine(backendPublishPath, "BSServer");
+                LogDebug(debugEnabled, $"清理前端目标目录: {frontendTarget}");
                 ClearDirectory(frontendTarget);
+                LogDebug(debugEnabled, $"复制前端产物: {tempDir} -> {frontendTarget}");
                 CopyDirectory(tempDir, frontendTarget);
             }
             finally
@@ -183,6 +201,7 @@ namespace PublishExtension.Commands
                 {
                     if (Directory.Exists(tempDir))
                     {
+                        LogDebug(debugEnabled, $"清理临时目录: {tempDir}");
                         Directory.Delete(tempDir, true);
                     }
                 }
@@ -249,7 +268,7 @@ namespace PublishExtension.Commands
             return path;
         }
 
-        private static ProcessResult RunProcess(string fileName, string arguments, string workingDir)
+        private static ProcessResult RunProcess(string fileName, string arguments, string workingDir, bool debugEnabled)
         {
             var psi = new ProcessStartInfo
             {
@@ -266,6 +285,7 @@ namespace PublishExtension.Commands
             {
                 using (var process = new Process { StartInfo = psi })
                 {
+                    LogDebug(debugEnabled, $"启动进程: {fileName} {arguments}");
                     if (!process.Start())
                     {
                         return ProcessResult.Fail($"无法启动进程: {fileName}");
@@ -285,12 +305,39 @@ namespace PublishExtension.Commands
                         return ProcessResult.Fail(message);
                     }
 
+                    if (!string.IsNullOrWhiteSpace(output))
+                    {
+                        LogDebug(debugEnabled, $"{fileName} 输出:\n{output}");
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(error))
+                    {
+                        LogDebug(debugEnabled, $"{fileName} 错误输出:\n{error}");
+                    }
+
                     return ProcessResult.Successful();
                 }
             }
             catch (Exception ex)
             {
                 return ProcessResult.Fail($"启动 {fileName} 失败: {ex.Message}");
+            }
+        }
+
+        private static void LogDebug(bool debugEnabled, string message)
+        {
+            if (!debugEnabled || string.IsNullOrWhiteSpace(message))
+            {
+                return;
+            }
+
+            try
+            {
+                ActivityLog.LogInformation("PublishExtension", message);
+            }
+            catch
+            {
+                // Ignore logging errors.
             }
         }
 
