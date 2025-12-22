@@ -22,9 +22,10 @@ VS 扩展：点击“发布”按钮后，自动执行 TFS 更新，并发布 `E
 
 ## 更新扩展
 
-1) 从 Release 下载最新 `PublishExtension.vsix`  
-2) 双击安装覆盖旧版本  
-3) 更新后重启 Visual Studio
+1) 在 VS 中打开：`扩展` → `管理扩展` → `已安装`，卸载旧版本  
+2) 重启 Visual Studio  
+3) 从 Release 下载最新 `PublishExtension.vsix` 并双击安装  
+4) 安装完成后重启 Visual Studio
 
 ## 构建
 
