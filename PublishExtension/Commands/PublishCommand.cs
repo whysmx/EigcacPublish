@@ -14,6 +14,8 @@ namespace PublishExtension.Commands
     internal sealed class PublishCommand
     {
         public const int CommandId = 0x0100;
+        public const int CommandProjectId = 0x0101;
+        public const int CommandSolutionId = 0x0102;
         public static readonly Guid CommandSet = new Guid("03000478-b1b7-4e82-9211-4a682be19a8c");
         private const string PublishProfileName = "ARM64";
 
@@ -23,9 +25,9 @@ namespace PublishExtension.Commands
         {
             this.package = package ?? throw new ArgumentNullException(nameof(package));
 
-            var menuCommandID = new CommandID(CommandSet, CommandId);
-            var menuItem = new OleMenuCommand(Execute, menuCommandID);
-            commandService.AddCommand(menuItem);
+            AddCommand(commandService, CommandId);
+            AddCommand(commandService, CommandProjectId);
+            AddCommand(commandService, CommandSolutionId);
         }
 
         public static async System.Threading.Tasks.Task InitializeAsync(AsyncPackage package)
@@ -57,6 +59,13 @@ namespace PublishExtension.Commands
                     ShowMessage($"执行失败: {ex.Message}", OLEMSGICON.OLEMSGICON_CRITICAL);
                 }
             });
+        }
+
+        private void AddCommand(OleMenuCommandService commandService, int commandId)
+        {
+            var menuCommandID = new CommandID(CommandSet, commandId);
+            var menuItem = new OleMenuCommand(Execute, menuCommandID);
+            commandService.AddCommand(menuItem);
         }
 
         private async System.Threading.Tasks.Task ExecuteAsync()

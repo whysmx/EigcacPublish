@@ -24,16 +24,21 @@
           <ButtonText>Eigcac发布</ButtonText>
         </Strings>
       </Button>
-    </Buttons>
-
-    <CommandPlacements>
-      <CommandPlacement guid="guidPublishExtensionPackageCmdSet" id="PublishCommandId" priority="0x0100">
+      <Button guid="guidPublishExtensionPackageCmdSet" id="PublishCommandProjectId" priority="0x0100" type="Button">
         <Parent guid="guidPublishExtensionPackageCmdSet" id="ProjectMenuGroup" />
-      </CommandPlacement>
-      <CommandPlacement guid="guidPublishExtensionPackageCmdSet" id="PublishCommandId" priority="0x0100">
+        <Icon guid="guidImages" id="PublishIcon" />
+        <Strings>
+          <ButtonText>Eigcac发布</ButtonText>
+        </Strings>
+      </Button>
+      <Button guid="guidPublishExtensionPackageCmdSet" id="PublishCommandSolutionId" priority="0x0100" type="Button">
         <Parent guid="guidPublishExtensionPackageCmdSet" id="SolutionContextGroup" />
-      </CommandPlacement>
-    </CommandPlacements>
+        <Icon guid="guidImages" id="PublishIcon" />
+        <Strings>
+          <ButtonText>Eigcac发布</ButtonText>
+        </Strings>
+      </Button>
+    </Buttons>
 
     <Bitmaps>
       <Bitmap guid="guidImages" href="Resources\PublishCommand.png" usedList="PublishIcon" />
@@ -51,6 +56,8 @@
       <IDSymbol name="ProjectMenuGroup" value="0x1021" />
       <IDSymbol name="SolutionContextGroup" value="0x1022" />
       <IDSymbol name="PublishCommandId" value="0x0100" />
+      <IDSymbol name="PublishCommandProjectId" value="0x0101" />
+      <IDSymbol name="PublishCommandSolutionId" value="0x0102" />
     </GuidSymbol>
     <GuidSymbol name="guidImages" value="{737E1A95-5622-4855-9870-83A28649C0BD}">
       <IDSymbol name="PublishIcon" value="1" />
