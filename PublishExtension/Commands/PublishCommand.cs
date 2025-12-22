@@ -16,6 +16,7 @@ namespace PublishExtension.Commands
         public const int CommandId = 0x0100;
         public const int CommandProjectId = 0x0101;
         public const int CommandSolutionId = 0x0102;
+        public const int CommandExtensionsId = 0x0103;
         public static readonly Guid CommandSet = new Guid("03000478-b1b7-4e82-9211-4a682be19a8c");
         private const string PublishProfileName = "ARM64";
 
@@ -28,6 +29,7 @@ namespace PublishExtension.Commands
             AddCommand(commandService, CommandId);
             AddCommand(commandService, CommandProjectId);
             AddCommand(commandService, CommandSolutionId);
+            AddCommand(commandService, CommandExtensionsId);
         }
 
         public static async System.Threading.Tasks.Task InitializeAsync(AsyncPackage package)
@@ -65,6 +67,13 @@ namespace PublishExtension.Commands
         {
             var menuCommandID = new CommandID(CommandSet, commandId);
             var menuItem = new OleMenuCommand(Execute, menuCommandID);
+            menuItem.Visible = true;
+            menuItem.Enabled = true;
+            menuItem.BeforeQueryStatus += (_, __) =>
+            {
+                menuItem.Visible = true;
+                menuItem.Enabled = true;
+            };
             commandService.AddCommand(menuItem);
         }
 
