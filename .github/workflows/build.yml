@@ -37,6 +37,10 @@ jobs:
           $xml.Save("PublishExtension/source.extension.vsixmanifest")
           Write-Host "VSIX version set to $version"
 
+      - name: Restore
+        run: |
+          dotnet restore PublishExtension.sln
+
       - name: Build VSIX
         run: |
           msbuild PublishExtension.sln /t:Rebuild /p:Configuration=Release
