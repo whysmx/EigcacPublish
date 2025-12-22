@@ -8,6 +8,7 @@
     <RootOutputDirectory>$(OutDir)</RootOutputDirectory>
     <IncludeClientEnabledPkgFile>false</IncludeClientEnabledPkgFile>
     <UseCodebase>true</UseCodebase>
+    <BypassVsixValidation>true</BypassVsixValidation>
     <RootNamespace>PublishExtension</RootNamespace>
     <AssemblyName>PublishExtension</AssemblyName>
     <LangVersion>latest</LangVersion>
