@@ -2,12 +2,23 @@
 
 VS 扩展：点击“发布”按钮后，自动执行 TFS 更新，并发布 `Eigcac.Main` 和 `Eigcac.BSServer`。
 
+## 安装
+
+1) 从 Release 下载 `PublishExtension.vsix`  
+2) 双击 VSIX，选择要安装的 VS 版本（2019/2022/2026）  
+3) 安装完成后重启 Visual Studio
+
 ## 使用
 
 1) 从 Release 下载 `PublishExtension.vsix` 并安装到 VS 2019/2022/2026  
 2) 在 VS 中打开需要发布的解决方案  
 3) 点击“发布”命令（首次会提示选择后端发布目录，默认桌面）  
 4) 插件会执行 TFS `get`，发布后端与前端，前端内容会拷贝到后端的 `BSServer` 目录
+
+## 配置项修改
+
+在 VS 中打开：`工具` → `选项` → `发布` → `配置`  
+可修改后端发布目录（首次选择后会记住，也可在此处手动修改）。
 
 ## 构建
 
