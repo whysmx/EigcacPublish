@@ -44,7 +44,7 @@ jobs:
       - name: Build VSIX
         shell: cmd
         run: |
-          msbuild PublishExtension\\PublishExtension.csproj /t:Build /p:Configuration=Release /p:GeneratePackageOnBuild=true
+          msbuild PublishExtension\\PublishExtension.csproj /t:Build;CreateVsixContainer /p:Configuration=Release
 
       - name: Locate VSIX
         shell: pwsh
