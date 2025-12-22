@@ -2,7 +2,6 @@ using System;
 using System.ComponentModel.Design;
 using System.Diagnostics;
 using System.IO;
-using Task = System.Threading.Tasks.Task;
 using System.Windows.Forms;
 using EnvDTE80;
 using Microsoft.VisualStudio;
@@ -29,7 +28,7 @@ namespace PublishExtension.Commands
             commandService.AddCommand(menuItem);
         }
 
-        public static async Task InitializeAsync(AsyncPackage package)
+        public static async System.Threading.Tasks.Task InitializeAsync(AsyncPackage package)
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             var commandService = await package.GetServiceAsync(typeof(IMenuCommandService)) as OleMenuCommandService;
@@ -59,7 +58,7 @@ namespace PublishExtension.Commands
             });
         }
 
-        private async Task ExecuteAsync()
+        private async System.Threading.Tasks.Task ExecuteAsync()
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
@@ -106,7 +105,7 @@ namespace PublishExtension.Commands
             }
 
             LogDebug(debugEnabled, $"发布路径: {publishPath}");
-            var result = await Task.Run(() => PublishAll(solutionDir, backendProject, frontendProject, publishPath, debugEnabled));
+            var result = await System.Threading.Tasks.Task.Run(() => PublishAll(solutionDir, backendProject, frontendProject, publishPath, debugEnabled));
 
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             if (!result.Success)
@@ -120,7 +119,7 @@ namespace PublishExtension.Commands
             ShowMessage("发布完成。", OLEMSGICON.OLEMSGICON_INFO);
         }
 
-        private async Task<string> GetOrPromptPublishPathAsync()
+        private async System.Threading.Tasks.Task<string> GetOrPromptPublishPathAsync()
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
