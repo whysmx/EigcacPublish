@@ -1,8 +1,7 @@
-<Project Sdk="Microsoft.VisualStudio.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <IsPackable>false</IsPackable>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <IncludeAssemblyInVSIXContainer>true</IncludeAssemblyInVSIXContainer>
     <IncludeDebugSymbolsInVSIXContainer>true</IncludeDebugSymbolsInVSIXContainer>
     <RootNamespace>PublishExtension</RootNamespace>
@@ -27,4 +26,6 @@
     <VSCTCompile Include="PublishExtension.vsct" />
     <None Include="Resources\PublishCommand.png" />
   </ItemGroup>
+
+  <Import Project="$(VSSDKTargets)" Condition="Exists('$(VSSDKTargets)')" />
 </Project>
