@@ -12,6 +12,7 @@
   </PropertyGroup>
   <PropertyGroup>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
+    <TargetVsixContainerName>PublishExtension.vsix</TargetVsixContainerName>
   </PropertyGroup>
 
   <Target Name="SetPkgDefAssemblyPath" BeforeTargets="GeneratePkgDef">
