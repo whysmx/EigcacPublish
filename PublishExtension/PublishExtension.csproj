@@ -40,7 +40,7 @@
 
   <ItemGroup>
     <VsixManifest Include="source.extension.vsixmanifest" />
-    <VSCTCompile Include="PublishExtension.vsct" />
+    <VSCTCompile Include="Menus.vsct" />
     <None Include="Resources\PublishCommand.png" />
   </ItemGroup>
 
