@@ -19,11 +19,13 @@ namespace PublishExtension.Commands
         public static readonly Guid CommandSet = new Guid("03000478-b1b7-4e82-9211-4a682be19a8c");
         private const string PublishProfileName = "ARM64";
 
+        private static PublishCommand instance;
         private readonly AsyncPackage package;
 
         private PublishCommand(AsyncPackage package, OleMenuCommandService commandService)
         {
             this.package = package ?? throw new ArgumentNullException(nameof(package));
+            instance = this;
 
             AddCommand(commandService, CommandId);
             AddCommand(commandService, CommandProjectId);
@@ -60,6 +62,11 @@ namespace PublishExtension.Commands
                     ShowMessage($"执行失败: {ex.Message}", OLEMSGICON.OLEMSGICON_CRITICAL);
                 }
             });
+        }
+
+        public static void Trigger()
+        {
+            instance?.Execute(null, EventArgs.Empty);
         }
 
         private void AddCommand(OleMenuCommandService commandService, int commandId)

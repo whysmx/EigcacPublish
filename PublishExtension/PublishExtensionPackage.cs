@@ -1,9 +1,12 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Threading;
+using EnvDTE;
+using EnvDTE80;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
+using Microsoft.VisualStudio.CommandBars;
 using PublishExtension.Commands;
 using PublishExtension.Options;
 
@@ -17,6 +20,10 @@ namespace PublishExtension
     public sealed class PublishExtensionPackage : AsyncPackage
     {
         public const string PackageGuidString = "f0836e0b-8b15-4d6d-a73f-37e4a7b31eb9";
+        private const string MenuTag = "EigcacPublishMenu";
+        private const string MenuButtonTag = "EigcacPublishButton";
+
+        private CommandBarEvents menuButtonEvents;
 
         protected override async System.Threading.Tasks.Task InitializeAsync(
             CancellationToken cancellationToken,
@@ -44,6 +51,7 @@ namespace PublishExtension
                 LogCommandName(cmdNameMapping, PublishCommand.CommandSet, PublishCommand.CommandProjectId);
                 LogCommandName(cmdNameMapping, PublishCommand.CommandSet, PublishCommand.CommandSolutionId);
             }
+            await EnsureTopLevelMenuAsync();
             try
             {
                 ActivityLog.LogInformation("PublishExtension", "包已初始化，准备加载菜单与命令。");
@@ -70,6 +78,76 @@ namespace PublishExtension
             var cmdGuid = guid;
             var hr = mapping.MapGUIDIDToName(ref cmdGuid, (uint)id, VSCMDNAMEOPTS.CNO_GETBOTH, out var name);
             ActivityLog.LogInformation("PublishExtension", $"命令映射: {guid} {id} hr=0x{hr:X8} name={name ?? "<null>"}");
+        }
+
+        private async System.Threading.Tasks.Task EnsureTopLevelMenuAsync()
+        {
+            var dte = await GetServiceAsync(typeof(DTE)) as DTE2;
+            if (dte == null)
+            {
+                ActivityLog.LogInformation("PublishExtension", "无法获取 DTE，跳过顶部菜单创建。");
+                return;
+            }
+
+            try
+            {
+                var commandBars = dte.CommandBars as CommandBars;
+                var menuBar = commandBars?["MenuBar"];
+                if (menuBar == null)
+                {
+                    ActivityLog.LogInformation("PublishExtension", "未找到 MenuBar，跳过顶部菜单创建。");
+                    return;
+                }
+
+                CommandBarPopup popup = null;
+                foreach (CommandBarControl control in menuBar.Controls)
+                {
+                    if (control is CommandBarPopup popupControl && string.Equals(popupControl.Tag, MenuTag, StringComparison.Ordinal))
+                    {
+                        popup = popupControl;
+                        break;
+                    }
+                }
+
+                if (popup == null)
+                {
+                    popup = (CommandBarPopup)menuBar.Controls.Add(MsoControlType.msoControlPopup, Type.Missing, Type.Missing, menuBar.Controls.Count + 1, true);
+                    popup.Caption = "Eigcac发布";
+                    popup.Tag = MenuTag;
+                }
+
+                CommandBarButton button = null;
+                foreach (CommandBarControl control in popup.Controls)
+                {
+                    if (control is CommandBarButton buttonControl && string.Equals(buttonControl.Tag, MenuButtonTag, StringComparison.Ordinal))
+                    {
+                        button = buttonControl;
+                        break;
+                    }
+                }
+
+                if (button == null)
+                {
+                    button = (CommandBarButton)popup.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, 1, true);
+                    button.Caption = "执行发布";
+                    button.Tag = MenuButtonTag;
+                }
+
+                button.Visible = true;
+                button.Enabled = true;
+                menuButtonEvents = (CommandBarEvents)dte.Events.CommandBarEvents[button];
+                menuButtonEvents.Click += OnMenuButtonClick;
+                ActivityLog.LogInformation("PublishExtension", "已创建顶部菜单 Eigcac发布。");
+            }
+            catch (Exception ex)
+            {
+                ActivityLog.LogInformation("PublishExtension", $"创建顶部菜单失败: {ex.Message}");
+            }
+        }
+
+        private void OnMenuButtonClick(CommandBarButton ctrl, ref bool cancelDefault)
+        {
+            PublishCommand.Trigger();
         }
     }
 }
