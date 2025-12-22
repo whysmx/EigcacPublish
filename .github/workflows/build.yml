@@ -42,8 +42,9 @@ jobs:
           dotnet restore PublishExtension.sln
 
       - name: Build VSIX
+        shell: cmd
         run: |
-          msbuild PublishExtension/PublishExtension.csproj /t:Build;CreateVsixContainer /p:Configuration=Release
+          msbuild PublishExtension\\PublishExtension.csproj /t:Build;CreateVsixContainer /p:Configuration=Release
 
       - name: Locate VSIX
         shell: pwsh
