@@ -23,7 +23,7 @@ namespace PublishExtension
         private const string MenuTag = "EigcacPublishMenu";
         private const string MenuButtonTag = "EigcacPublishButton";
 
-        private CommandBarEvents menuButtonEvents;
+        private CommandBarButton menuButton;
 
         protected override async System.Threading.Tasks.Task InitializeAsync(
             CancellationToken cancellationToken,
@@ -75,6 +75,7 @@ namespace PublishExtension
 
         private static void LogCommandName(IVsCmdNameMapping mapping, Guid guid, int id)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
             var cmdGuid = guid;
             var hr = mapping.MapGUIDIDToName(ref cmdGuid, (uint)id, VSCMDNAMEOPTS.CNO_GETBOTH, out var name);
             ActivityLog.LogInformation("PublishExtension", $"命令映射: {guid} {id} hr=0x{hr:X8} name={name ?? "<null>"}");
@@ -135,8 +136,8 @@ namespace PublishExtension
 
                 button.Visible = true;
                 button.Enabled = true;
-                menuButtonEvents = (CommandBarEvents)dte.Events.CommandBarEvents[button];
-                menuButtonEvents.Click += OnMenuButtonClick;
+                menuButton = button;
+                menuButton.Click += OnMenuButtonClick;
                 ActivityLog.LogInformation("PublishExtension", "已创建顶部菜单 Eigcac发布。");
             }
             catch (Exception ex)
