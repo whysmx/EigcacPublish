@@ -7,6 +7,7 @@
     <RootNamespace>PublishExtension</RootNamespace>
     <AssemblyName>PublishExtension</AssemblyName>
     <LangVersion>latest</LangVersion>
+    <TemplateOutputDirectory>$(BaseIntermediateOutputPath)Templates</TemplateOutputDirectory>
   </PropertyGroup>
 
   <ItemGroup>
