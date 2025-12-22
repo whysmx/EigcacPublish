@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel.Design;
 using System.Diagnostics;
 using System.IO;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using EnvDTE80;
 using Microsoft.VisualStudio;
@@ -136,7 +137,16 @@ namespace PublishExtension.Commands
             }
 
             LogDebug(debugEnabled, $"发布路径: {publishPath}");
-            var result = await System.Threading.Tasks.Task.Run(() => PublishAll(solutionDir, backendProject, frontendProject, publishPath, debugEnabled));
+            var tfsUpdateResult = await UpdateFromTfsAsync(solutionDir, options, debugEnabled);
+            if (!tfsUpdateResult.Success)
+            {
+                LogDebug(debugEnabled, $"TFS 更新失败: {tfsUpdateResult.Message}");
+                await LogOutputAsync(package, $"TFS 更新失败: {tfsUpdateResult.Message}");
+                ShowMessage(tfsUpdateResult.Message, OLEMSGICON.OLEMSGICON_CRITICAL);
+                return;
+            }
+
+            var result = await System.Threading.Tasks.Task.Run(() => PublishProjects(solutionDir, backendProject, frontendProject, publishPath, debugEnabled));
 
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             if (!result.Success)
@@ -150,6 +160,94 @@ namespace PublishExtension.Commands
             LogDebug(debugEnabled, "发布完成。");
             await LogOutputAsync(package, "发布完成。");
             ShowMessage("发布完成。", OLEMSGICON.OLEMSGICON_INFO);
+        }
+
+        private async System.Threading.Tasks.Task<PublishResult> UpdateFromTfsAsync(string solutionDir, PublishOptions options, bool debugEnabled)
+        {
+            LogDebug(debugEnabled, "开始执行 TFS 更新。");
+
+            var argsResult = await System.Threading.Tasks.Task.Run(() => BuildTfsGetArguments(solutionDir, options, debugEnabled));
+            if (!argsResult.Success)
+            {
+                return PublishResult.Fail(argsResult.Message);
+            }
+
+            var tfsResult = await System.Threading.Tasks.Task.Run(() => RunProcess("tf", argsResult.Arguments, solutionDir, debugEnabled));
+            if (tfsResult.Success)
+            {
+                return PublishResult.Successful();
+            }
+
+            if (!IsAuthFailure(tfsResult.Message) || options == null)
+            {
+                return PublishResult.Fail($"TFS 更新失败:\n{tfsResult.Message}");
+            }
+
+            await LogOutputAsync(package, "TFS 权限不足，正在请求账号密码。");
+            var credentialResult = await PromptForCredentialsAsync(options);
+            if (credentialResult == null)
+            {
+                return PublishResult.Fail($"TFS 更新失败:\n{tfsResult.Message}");
+            }
+
+            var retryArgsResult = await System.Threading.Tasks.Task.Run(() => BuildTfsGetArguments(solutionDir, options, debugEnabled));
+            if (!retryArgsResult.Success)
+            {
+                return PublishResult.Fail(retryArgsResult.Message);
+            }
+
+            var retryResult = await System.Threading.Tasks.Task.Run(() => RunProcess("tf", retryArgsResult.Arguments, solutionDir, debugEnabled));
+            if (!retryResult.Success)
+            {
+                return PublishResult.Fail($"TFS 更新失败:\n{retryResult.Message}");
+            }
+
+            return PublishResult.Successful();
+        }
+
+        private async System.Threading.Tasks.Task<CredentialResult> PromptForCredentialsAsync(PublishOptions options)
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+            using (var dialog = new CredentialsDialog(options?.TfsUsername ?? string.Empty))
+            {
+                var result = dialog.ShowDialog();
+                if (result != DialogResult.OK)
+                {
+                    return null;
+                }
+
+                var username = dialog.Username?.Trim();
+                var password = dialog.Password ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
+                {
+                    ShowMessage("TFS 用户名或密码为空，已取消。", OLEMSGICON.OLEMSGICON_WARNING);
+                    return null;
+                }
+
+                if (options != null)
+                {
+                    options.TfsUsername = username;
+                    options.TfsPassword = password;
+                    options.SaveSettingsToStorage();
+                }
+
+                return new CredentialResult(username, password);
+            }
+        }
+
+        private static bool IsAuthFailure(string message)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                return false;
+            }
+
+            return message.IndexOf("TF30063", StringComparison.OrdinalIgnoreCase) >= 0
+                || message.IndexOf("没有访问", StringComparison.OrdinalIgnoreCase) >= 0
+                || message.IndexOf("no access", StringComparison.OrdinalIgnoreCase) >= 0
+                || message.IndexOf("not authorized", StringComparison.OrdinalIgnoreCase) >= 0
+                || message.IndexOf("unauthorized", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private async System.Threading.Tasks.Task<string> GetOrPromptPublishPathAsync()
@@ -191,20 +289,13 @@ namespace PublishExtension.Commands
             }
         }
 
-        private static PublishResult PublishAll(
+        private static PublishResult PublishProjects(
             string solutionDir,
             string backendProject,
             string frontendProject,
             string backendPublishPath,
             bool debugEnabled)
         {
-            LogDebug(debugEnabled, "开始执行 TFS 更新。");
-            var tfsResult = RunProcess("tf", "get /recursive /noprompt", solutionDir, debugEnabled);
-            if (!tfsResult.Success)
-            {
-                return PublishResult.Fail($"TFS 更新失败:\n{tfsResult.Message}");
-            }
-
             Directory.CreateDirectory(backendPublishPath);
 
             var backendPublishDir = EnsureTrailingSeparator(backendPublishPath);
@@ -253,6 +344,339 @@ namespace PublishExtension.Commands
             }
 
             return PublishResult.Successful();
+        }
+
+        private static CommandArgsResult BuildTfsGetArguments(string solutionDir, PublishOptions options, bool debugEnabled)
+        {
+            var loginArgsResult = BuildTfsLoginArgs(options);
+            if (!loginArgsResult.Success)
+            {
+                return CommandArgsResult.Fail(loginArgsResult.Message);
+            }
+
+            var needsDetect = options == null
+                || string.IsNullOrWhiteSpace(options.TfsServerPath)
+                || string.IsNullOrWhiteSpace(options.TfsCollectionUrl);
+            var detection = needsDetect
+                ? TryDetectTfsInfo(solutionDir, options, loginArgsResult.Arguments, debugEnabled)
+                : new TfsDetectionResult(string.Empty, string.Empty);
+            var serverPath = options?.TfsServerPath?.Trim();
+            if (string.IsNullOrWhiteSpace(serverPath))
+            {
+                serverPath = detection.ServerPath;
+                if (!string.IsNullOrWhiteSpace(serverPath))
+                {
+                    LogDebug(debugEnabled, $"检测到 TFS 服务器路径: {serverPath}");
+                }
+            }
+
+            var collectionUrl = options?.TfsCollectionUrl?.Trim();
+            if (string.IsNullOrWhiteSpace(collectionUrl))
+            {
+                collectionUrl = detection.CollectionUrl;
+                if (!string.IsNullOrWhiteSpace(collectionUrl))
+                {
+                    LogDebug(debugEnabled, $"检测到 TFS 集合地址: {collectionUrl}");
+                }
+            }
+
+            var baseArgs = string.IsNullOrWhiteSpace(serverPath)
+                ? "get /recursive /noprompt"
+                : $"get \"{serverPath}\" /recursive /noprompt";
+
+            var finalArgs = baseArgs;
+            if (!string.IsNullOrWhiteSpace(collectionUrl))
+            {
+                finalArgs = $"{finalArgs} /collection:\"{collectionUrl}\"";
+            }
+
+            if (!string.IsNullOrWhiteSpace(loginArgsResult.Arguments))
+            {
+                finalArgs = $"{finalArgs} {loginArgsResult.Arguments}";
+            }
+
+            LogDebug(debugEnabled, $"TFS 命令: tf {finalArgs}");
+            return CommandArgsResult.Successful(finalArgs);
+        }
+
+        private static CommandArgsResult BuildTfsLoginArgs(PublishOptions options)
+        {
+            if (options == null)
+            {
+                return CommandArgsResult.Successful(string.Empty);
+            }
+
+            var hasUser = !string.IsNullOrWhiteSpace(options.TfsUsername);
+            var hasPassword = !string.IsNullOrWhiteSpace(options.TfsPassword);
+            if (hasUser || hasPassword)
+            {
+                if (!hasUser || !hasPassword)
+                {
+                    return CommandArgsResult.Fail("TFS 用户名或密码未完整配置，请在选项中补全。");
+                }
+
+                if (options.TfsUsername.Contains("\"") || options.TfsPassword.Contains("\""))
+                {
+                    return CommandArgsResult.Fail("TFS 用户名或密码包含双引号，暂不支持。");
+                }
+
+                var loginValue = $"{options.TfsUsername},{options.TfsPassword}";
+                var loginArg = NeedsQuotes(loginValue)
+                    ? $"/login:\"{loginValue}\""
+                    : $"/login:{loginValue}";
+                return CommandArgsResult.Successful(loginArg);
+            }
+
+            return CommandArgsResult.Successful(string.Empty);
+        }
+
+        private static TfsDetectionResult TryDetectTfsInfo(string solutionDir, PublishOptions options, string loginArgs, bool debugEnabled)
+        {
+            var serverPath = string.Empty;
+            var collectionUrl = string.Empty;
+            var commonArgs = string.Empty;
+
+            if (!string.IsNullOrWhiteSpace(options?.TfsCollectionUrl))
+            {
+                commonArgs = $"/collection:\"{options.TfsCollectionUrl}\"";
+            }
+
+            if (!string.IsNullOrWhiteSpace(loginArgs))
+            {
+                commonArgs = string.IsNullOrWhiteSpace(commonArgs) ? loginArgs : $"{commonArgs} {loginArgs}";
+            }
+
+            var workfoldArgs = $"workfold \"{solutionDir}\" /format:xml /noprompt";
+            if (!string.IsNullOrWhiteSpace(commonArgs))
+            {
+                workfoldArgs = $"{workfoldArgs} {commonArgs}";
+            }
+
+            var workfoldResult = RunProcessWithOutput("tf", workfoldArgs, solutionDir, debugEnabled);
+            if (workfoldResult.Success)
+            {
+                serverPath = ExtractServerPathFromWorkfold(workfoldResult.Output);
+                collectionUrl = ExtractCollectionUrl(workfoldResult.Output);
+            }
+            else
+            {
+                LogDebug(debugEnabled, $"TFS workfold 失败: {workfoldResult.Message}");
+            }
+
+            var infoArgs = $"info \"{solutionDir}\" /format:xml /noprompt";
+            if (!string.IsNullOrWhiteSpace(commonArgs))
+            {
+                infoArgs = $"{infoArgs} {commonArgs}";
+            }
+
+            var infoResult = RunProcessWithOutput("tf", infoArgs, solutionDir, debugEnabled);
+            if (infoResult.Success)
+            {
+                if (string.IsNullOrWhiteSpace(serverPath))
+                {
+                    serverPath = ExtractServerPathFromInfo(infoResult.Output);
+                }
+
+                if (string.IsNullOrWhiteSpace(collectionUrl))
+                {
+                    collectionUrl = ExtractCollectionUrl(infoResult.Output);
+                }
+            }
+            else
+            {
+                LogDebug(debugEnabled, $"TFS info 失败: {infoResult.Message}");
+            }
+
+            return new TfsDetectionResult(serverPath, collectionUrl);
+        }
+
+        private static string ExtractServerPathFromWorkfold(string output)
+        {
+            if (string.IsNullOrWhiteSpace(output))
+            {
+                return string.Empty;
+            }
+
+            var match = Regex.Match(output, "serverItem=\"(\\$/[^\"]+)\"", RegexOptions.IgnoreCase);
+            if (match.Success && match.Groups.Count > 1)
+            {
+                return match.Groups[1].Value.Trim();
+            }
+
+            return string.Empty;
+        }
+
+        private static string ExtractServerPathFromInfo(string output)
+        {
+            if (string.IsNullOrWhiteSpace(output))
+            {
+                return string.Empty;
+            }
+
+            var match = Regex.Match(output, "\\$/[^\"\\s<]+");
+            if (!match.Success)
+            {
+                return string.Empty;
+            }
+
+            var path = match.Value.Trim();
+            if (!string.IsNullOrWhiteSpace(Path.GetExtension(path)))
+            {
+                var lastSlash = path.LastIndexOf('/');
+                if (lastSlash > 1)
+                {
+                    path = path.Substring(0, lastSlash);
+                }
+            }
+
+            return path;
+        }
+
+        private static string ExtractCollectionUrl(string output)
+        {
+            if (string.IsNullOrWhiteSpace(output))
+            {
+                return string.Empty;
+            }
+
+            var patterns = new[]
+            {
+                "collection=\"(https?://[^\"]+)\"",
+                "collectionUri=\"(https?://[^\"]+)\"",
+                "teamProjectCollection=\"(https?://[^\"]+)\"",
+                "server=\"(https?://[^\"]+/tfs/[^\"]+)\"",
+                "uri=\"(https?://[^\"]+/tfs/[^\"]+)\"",
+                "(https?://[^\"\\s<]+/tfs/[^\"\\s<]+)"
+            };
+
+            foreach (var pattern in patterns)
+            {
+                var match = Regex.Match(output, pattern, RegexOptions.IgnoreCase);
+                if (match.Success)
+                {
+                    if (match.Groups.Count > 1)
+                    {
+                        return match.Groups[1].Value.Trim();
+                    }
+
+                    return match.Value.Trim();
+                }
+            }
+
+            return string.Empty;
+        }
+
+        private static bool NeedsQuotes(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return false;
+            }
+
+            return value.IndexOfAny(new[] { ' ', '\t' }) >= 0;
+        }
+
+        private sealed class TfsDetectionResult
+        {
+            public TfsDetectionResult(string serverPath, string collectionUrl)
+            {
+                ServerPath = serverPath ?? string.Empty;
+                CollectionUrl = collectionUrl ?? string.Empty;
+            }
+
+            public string ServerPath { get; }
+            public string CollectionUrl { get; }
+        }
+
+        private sealed class CredentialResult
+        {
+            public CredentialResult(string username, string password)
+            {
+                Username = username ?? string.Empty;
+                Password = password ?? string.Empty;
+            }
+
+            public string Username { get; }
+            public string Password { get; }
+        }
+
+        private sealed class CredentialsDialog : Form
+        {
+            private readonly TextBox usernameBox;
+            private readonly TextBox passwordBox;
+
+            public CredentialsDialog(string username)
+            {
+                Text = "TFS 登录";
+                FormBorderStyle = FormBorderStyle.FixedDialog;
+                StartPosition = FormStartPosition.CenterParent;
+                MaximizeBox = false;
+                MinimizeBox = false;
+                ClientSize = new System.Drawing.Size(380, 170);
+
+                var userLabel = new Label
+                {
+                    Text = "用户名",
+                    Left = 20,
+                    Top = 20,
+                    Width = 70
+                };
+
+                usernameBox = new TextBox
+                {
+                    Left = 100,
+                    Top = 18,
+                    Width = 250,
+                    Text = username ?? string.Empty
+                };
+
+                var passLabel = new Label
+                {
+                    Text = "密码",
+                    Left = 20,
+                    Top = 60,
+                    Width = 70
+                };
+
+                passwordBox = new TextBox
+                {
+                    Left = 100,
+                    Top = 58,
+                    Width = 250,
+                    UseSystemPasswordChar = true
+                };
+
+                var okButton = new Button
+                {
+                    Text = "确定",
+                    DialogResult = DialogResult.OK,
+                    Left = 190,
+                    Width = 75,
+                    Top = 110
+                };
+
+                var cancelButton = new Button
+                {
+                    Text = "取消",
+                    DialogResult = DialogResult.Cancel,
+                    Left = 275,
+                    Width = 75,
+                    Top = 110
+                };
+
+                Controls.Add(userLabel);
+                Controls.Add(usernameBox);
+                Controls.Add(passLabel);
+                Controls.Add(passwordBox);
+                Controls.Add(okButton);
+                Controls.Add(cancelButton);
+
+                AcceptButton = okButton;
+                CancelButton = cancelButton;
+            }
+
+            public string Username => usernameBox.Text;
+            public string Password => passwordBox.Text;
         }
 
         private static void ClearDirectory(string targetDir)
@@ -307,6 +731,62 @@ namespace PublishExtension.Commands
             }
 
             return path;
+        }
+
+        private static ProcessOutputResult RunProcessWithOutput(string fileName, string arguments, string workingDir, bool debugEnabled)
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = fileName,
+                Arguments = arguments,
+                WorkingDirectory = workingDir,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            try
+            {
+                using (var process = new System.Diagnostics.Process { StartInfo = psi })
+                {
+                    LogDebug(debugEnabled, $"启动进程: {fileName} {arguments}");
+                    if (!process.Start())
+                    {
+                        return ProcessOutputResult.Fail($"无法启动进程: {fileName}", string.Empty, string.Empty);
+                    }
+
+                    var output = process.StandardOutput.ReadToEnd();
+                    var error = process.StandardError.ReadToEnd();
+                    process.WaitForExit();
+
+                    if (process.ExitCode != 0)
+                    {
+                        var message = string.IsNullOrWhiteSpace(error) ? output : error;
+                        if (string.IsNullOrWhiteSpace(message))
+                        {
+                            message = $"{fileName} 返回码: {process.ExitCode}";
+                        }
+                        return ProcessOutputResult.Fail(message, output, error);
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(output))
+                    {
+                        LogDebug(debugEnabled, $"{fileName} 输出:\n{output}");
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(error))
+                    {
+                        LogDebug(debugEnabled, $"{fileName} 错误输出:\n{error}");
+                    }
+
+                    return ProcessOutputResult.Successful(output, error);
+                }
+            }
+            catch (Exception ex)
+            {
+                return ProcessOutputResult.Fail($"启动 {fileName} 失败: {ex.Message}", string.Empty, string.Empty);
+            }
         }
 
         private static ProcessResult RunProcess(string fileName, string arguments, string workingDir, bool debugEnabled)
@@ -463,6 +943,48 @@ namespace PublishExtension.Commands
 
             public static ProcessResult Successful() => new ProcessResult(true, string.Empty);
             public static ProcessResult Fail(string message) => new ProcessResult(false, message);
+        }
+
+        private sealed class ProcessOutputResult
+        {
+            private ProcessOutputResult(bool success, string message, string output, string error)
+            {
+                Success = success;
+                Message = message;
+                Output = output ?? string.Empty;
+                Error = error ?? string.Empty;
+            }
+
+            public bool Success { get; }
+            public string Message { get; }
+            public string Output { get; }
+            public string Error { get; }
+
+            public static ProcessOutputResult Successful(string output, string error)
+                => new ProcessOutputResult(true, string.Empty, output, error);
+
+            public static ProcessOutputResult Fail(string message, string output, string error)
+                => new ProcessOutputResult(false, message, output, error);
+        }
+
+        private sealed class CommandArgsResult
+        {
+            private CommandArgsResult(bool success, string message, string arguments)
+            {
+                Success = success;
+                Message = message;
+                Arguments = arguments ?? string.Empty;
+            }
+
+            public bool Success { get; }
+            public string Message { get; }
+            public string Arguments { get; }
+
+            public static CommandArgsResult Successful(string arguments)
+                => new CommandArgsResult(true, string.Empty, arguments);
+
+            public static CommandArgsResult Fail(string message)
+                => new CommandArgsResult(false, message, string.Empty);
         }
     }
 }
