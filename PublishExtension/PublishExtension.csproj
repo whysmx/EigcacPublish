@@ -6,6 +6,7 @@
     <IncludeAssemblyInVSIXContainer>true</IncludeAssemblyInVSIXContainer>
     <IncludeDebugSymbolsInVSIXContainer>true</IncludeDebugSymbolsInVSIXContainer>
     <RootOutputDirectory>$(OutDir)</RootOutputDirectory>
+    <IncludeClientEnabledPkgFile>false</IncludeClientEnabledPkgFile>
     <RootNamespace>PublishExtension</RootNamespace>
     <AssemblyName>PublishExtension</AssemblyName>
     <LangVersion>latest</LangVersion>
