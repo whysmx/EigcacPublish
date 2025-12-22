@@ -41,19 +41,22 @@ namespace PublishExtension.Commands
             _ = new PublishCommand(package, commandService);
         }
 
-        private async void Execute(object sender, EventArgs e)
+        private void Execute(object sender, EventArgs e)
         {
-            try
+            _ = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
-                await ExecuteAsync();
-            }
-            catch (Exception ex)
-            {
-                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                var options = (PublishOptions)package.GetDialogPage(typeof(PublishOptions));
-                LogDebug(options.EnableDebugLogging, $"执行失败: {ex}");
-                ShowMessage($"执行失败: {ex.Message}", OLEMSGICON.OLEMSGICON_CRITICAL);
-            }
+                try
+                {
+                    await ExecuteAsync();
+                }
+                catch (Exception ex)
+                {
+                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                    var options = (PublishOptions)package.GetDialogPage(typeof(PublishOptions));
+                    LogDebug(options.EnableDebugLogging, $"执行失败: {ex}");
+                    ShowMessage($"执行失败: {ex.Message}", OLEMSGICON.OLEMSGICON_CRITICAL);
+                }
+            });
         }
 
         private async Task ExecuteAsync()
@@ -61,7 +64,13 @@ namespace PublishExtension.Commands
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
             var dte = await package.GetServiceAsync(typeof(EnvDTE.DTE)) as DTE2;
-            if (dte?.Solution == null || string.IsNullOrWhiteSpace(dte.Solution.FullName))
+            if (dte == null)
+            {
+                ShowMessage("无法获取 DTE 服务。", OLEMSGICON.OLEMSGICON_WARNING);
+                return;
+            }
+
+            if (dte.Solution == null || string.IsNullOrWhiteSpace(dte.Solution.FullName))
             {
                 ShowMessage("请先打开需要发布的解决方案。", OLEMSGICON.OLEMSGICON_WARNING);
                 return;
