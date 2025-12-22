@@ -36,6 +36,7 @@ namespace PublishExtension.Commands
             var commandService = await package.GetServiceAsync(typeof(IMenuCommandService)) as OleMenuCommandService;
             if (commandService == null)
             {
+                await LogOutputAsync(package, "命令服务为空，无法注册命令。");
                 return;
             }
 
@@ -71,6 +72,7 @@ namespace PublishExtension.Commands
             {
                 menuItem.Visible = true;
                 menuItem.Enabled = true;
+                _ = LogOutputAsync(package, $"命令状态检查: {commandId} (Visible={menuItem.Visible}, Enabled={menuItem.Enabled})");
             };
             commandService.AddCommand(menuItem);
         }
@@ -372,6 +374,23 @@ namespace PublishExtension.Commands
             }
         }
 
+        private static void LogActivity(string message)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                return;
+            }
+
+            try
+            {
+                ActivityLog.LogInformation("PublishExtension", message);
+            }
+            catch
+            {
+                // Ignore logging errors.
+            }
+        }
+
         private static async System.Threading.Tasks.Task LogOutputAsync(AsyncPackage package, string message)
         {
             if (package == null || string.IsNullOrWhiteSpace(message))
@@ -383,6 +402,7 @@ namespace PublishExtension.Commands
             var outputWindow = await package.GetServiceAsync(typeof(SVsOutputWindow)) as IVsOutputWindow;
             if (outputWindow == null)
             {
+                LogActivity($"输出窗口不可用: {message}");
                 return;
             }
 
@@ -393,6 +413,7 @@ namespace PublishExtension.Commands
             {
                 pane.OutputStringThreadSafe($"{DateTime.Now:HH:mm:ss} {message}{Environment.NewLine}");
             }
+            LogActivity(message);
         }
 
         private void ShowMessage(string message, OLEMSGICON icon)

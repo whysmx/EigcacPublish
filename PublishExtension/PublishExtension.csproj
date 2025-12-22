@@ -9,6 +9,7 @@
     <IncludeClientEnabledPkgFile>false</IncludeClientEnabledPkgFile>
     <UseCodebase>true</UseCodebase>
     <BypassVsixValidation>true</BypassVsixValidation>
+    <GenerateVSCTResource>true</GenerateVSCTResource>
     <RootNamespace>PublishExtension</RootNamespace>
     <AssemblyName>PublishExtension</AssemblyName>
     <LangVersion>latest</LangVersion>

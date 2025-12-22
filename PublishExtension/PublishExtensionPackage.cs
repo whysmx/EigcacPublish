@@ -31,6 +31,14 @@ namespace PublishExtension
                 var paneGuid = new Guid("9C47EA07-7688-4A7C-B2C8-AD5B5B1B2521");
                 outputWindow.CreatePane(ref paneGuid, "Eigcac发布", 1, 1);
             }
+            try
+            {
+                ActivityLog.LogInformation("PublishExtension", "包已初始化，准备加载菜单与命令。");
+            }
+            catch
+            {
+                // Ignore logging errors.
+            }
         }
     }
 }
