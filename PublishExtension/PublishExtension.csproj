@@ -41,6 +41,10 @@
     <VsixManifest Include="source.extension.vsixmanifest" />
     <VSCTCompile Include="PublishExtension.vsct" />
     <None Include="Resources\PublishCommand.png" />
+    <EmbeddedResource Include="Resources\Menus.resx">
+      <MergeWithCTO>true</MergeWithCTO>
+      <ManifestResourceName>Menus.ctmenu</ManifestResourceName>
+    </EmbeddedResource>
   </ItemGroup>
 
   <Import Project="$(VSSDKTargets)" Condition="Exists('$(VSSDKTargets)')" />
