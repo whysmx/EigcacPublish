@@ -10,3 +10,7 @@ msbuild PublishExtension.sln /t:Rebuild /p:Configuration=Release
 ```
 
 产物位于：`PublishExtension/bin/Release/*.vsix`
+
+## 发布 Release
+
+打 tag（例如 `v1.0.1`）推送到 GitHub，会自动设置 VSIX 版本并创建 Release，附带 VSIX 产物。
