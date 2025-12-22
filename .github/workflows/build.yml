@@ -41,6 +41,11 @@ jobs:
         run: |
           dotnet restore PublishExtension.sln
 
+      - name: List VSSDK Targets
+        shell: cmd
+        run: |
+          type %USERPROFILE%\\.nuget\\packages\\microsoft.vssdk.buildtools\\17.8.2365\\build\\Microsoft.VSSDK.BuildTools.targets | findstr /i "Target Vsix"
+
       - name: Build VSIX
         shell: cmd
         run: |
