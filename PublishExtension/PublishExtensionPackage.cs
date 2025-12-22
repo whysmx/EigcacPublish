@@ -11,6 +11,7 @@ namespace PublishExtension
     [Guid(PackageGuidString)]
     [ProvideMenuResource("Menus.ctmenu", 1)]
     [ProvideOptionPage(typeof(PublishOptions), "发布", "配置", 0, 0, true)]
+    [ProvideAutoLoad(VSConstants.UICONTEXT.SolutionExists_string, PackageAutoLoadFlags.BackgroundLoad)]
     public sealed class PublishExtensionPackage : AsyncPackage
     {
         public const string PackageGuidString = "f0836e0b-8b15-4d6d-a73f-37e4a7b31eb9";
