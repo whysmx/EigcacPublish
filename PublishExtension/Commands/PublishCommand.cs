@@ -1,9 +1,9 @@
 using System;
+using System.ComponentModel.Design;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
@@ -60,7 +60,7 @@ namespace PublishExtension.Commands
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-            var dte = await package.GetServiceAsync(typeof(DTE)) as DTE2;
+            var dte = await package.GetServiceAsync(typeof(EnvDTE.DTE)) as DTE2;
             if (dte?.Solution == null || string.IsNullOrWhiteSpace(dte.Solution.FullName))
             {
                 ShowMessage("请先打开需要发布的解决方案。", OLEMSGICON.OLEMSGICON_WARNING);
@@ -124,9 +124,9 @@ namespace PublishExtension.Commands
                     package,
                     $"使用已保存的发布路径？\n{currentPath}\n选择“否”可重新选择。",
                     "发布",
-                    OLEMSGBUTTON.OLEMSGBUTTON_YESNO,
                     OLEMSGICON.OLEMSGICON_QUERY,
-                    0);
+                    OLEMSGBUTTON.OLEMSGBUTTON_YESNO,
+                    OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 
                 if (useSaved == (int)VSConstants.MessageBoxResult.IDYES)
                 {
@@ -283,7 +283,7 @@ namespace PublishExtension.Commands
 
             try
             {
-                using (var process = new Process { StartInfo = psi })
+                using (var process = new System.Diagnostics.Process { StartInfo = psi })
                 {
                     LogDebug(debugEnabled, $"启动进程: {fileName} {arguments}");
                     if (!process.Start())
@@ -347,9 +347,9 @@ namespace PublishExtension.Commands
                 package,
                 message,
                 "发布",
-                OLEMSGBUTTON.OLEMSGBUTTON_OK,
                 icon,
-                0);
+                OLEMSGBUTTON.OLEMSGBUTTON_OK,
+                OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
         }
 
         private sealed class PublishResult
