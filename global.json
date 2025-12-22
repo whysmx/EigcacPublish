@@ -1,0 +1,5 @@
+{
+  "msbuild-sdks": {
+    "Microsoft.VisualStudio.Sdk": "17.7.3310"
+  }
+}
