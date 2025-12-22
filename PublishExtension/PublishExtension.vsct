@@ -15,7 +15,7 @@
         <Parent guid="guidPublishExtensionPackageCmdSet" id="MyMenuGroup" />
         <Icon guid="guidImages" id="PublishIcon" />
         <Strings>
-          <ButtonText>发布</ButtonText>
+          <ButtonText>Eigcac发布</ButtonText>
         </Strings>
       </Button>
     </Buttons>
