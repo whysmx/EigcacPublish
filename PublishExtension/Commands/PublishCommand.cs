@@ -75,6 +75,7 @@ namespace PublishExtension.Commands
                 _ = LogOutputAsync(package, $"命令状态检查: {commandId} (Visible={menuItem.Visible}, Enabled={menuItem.Enabled})");
             };
             commandService.AddCommand(menuItem);
+            _ = LogOutputAsync(package, $"已添加命令: {commandId}");
         }
 
         private async System.Threading.Tasks.Task ExecuteAsync()

@@ -34,6 +34,17 @@ namespace PublishExtension
             try
             {
                 ActivityLog.LogInformation("PublishExtension", "包已初始化，准备加载菜单与命令。");
+                var resources = GetType().Assembly.GetManifestResourceNames();
+                var hasMenu = false;
+                foreach (var name in resources)
+                {
+                    if (string.Equals(name, "Menus.ctmenu", StringComparison.OrdinalIgnoreCase) ||
+                        name.EndsWith("Menus.ctmenu.resources", StringComparison.OrdinalIgnoreCase))
+                    {
+                        hasMenu = true;
+                    }
+                }
+                ActivityLog.LogInformation("PublishExtension", $"程序集资源数: {resources.Length}, 是否包含 Menus.ctmenu: {hasMenu}");
             }
             catch
             {
