@@ -41,7 +41,10 @@
     <VsixManifest Include="source.extension.vsixmanifest" />
     <VSCTCompile Include="PublishExtension.vsct" />
     <None Include="Resources\PublishCommand.png" />
-    <EmbeddedResource Include="Resources\Menus.resx">
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="Resources\Menus.resx">
       <MergeWithCTO>true</MergeWithCTO>
       <ManifestResourceName>Menus.ctmenu</ManifestResourceName>
     </EmbeddedResource>
