@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using PublishExtension.Commands;
 using PublishExtension.Options;
