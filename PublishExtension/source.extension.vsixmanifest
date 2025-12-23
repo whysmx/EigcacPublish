@@ -5,11 +5,11 @@
                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <Metadata>
     <Identity Id="PublishExtension.7154A2F0-BBA8-4683-8250-B76CC5B591F0"
-              Version="1.0.1"
+              Version="1.1.0"
               Language="zh-CN"
               Publisher="Eigcac" />
     <DisplayName>发布</DisplayName>
-    <Description xml:space="preserve">拉取 TFS 最新代码并发布 Eigcac.Main 和 Eigcac.BSServer。</Description>
+    <Description xml:space="preserve">使用 Visual Studio 原生发布功能发布 Eigcac.Main 和 Eigcac.BSServer。</Description>
   </Metadata>
   <Installation>
     <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[16.0,17.0)">
