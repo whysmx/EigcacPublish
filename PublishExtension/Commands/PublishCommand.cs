@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel.Design;
+using System.Diagnostics;
 using System.Threading;
 using EnvDTE;
 using EnvDTE80;
@@ -18,7 +19,6 @@ namespace PublishExtension.Commands
         private static PublishCommand instance;
         private readonly AsyncPackage package;
         private DTE2 dte;
-        private BuildEvents buildEvents;
         private readonly SemaphoreSlim publishSemaphore = new SemaphoreSlim(1, 1);
 
         private PublishCommand(AsyncPackage package, OleMenuCommandService commandService)
@@ -91,9 +91,6 @@ namespace PublishExtension.Commands
                         ShowMessage("无法获取 DTE 服务。", OLEMSGICON.OLEMSGICON_WARNING);
                         return;
                     }
-
-                    // 订阅构建事件
-                    buildEvents = dte.Events.BuildEvents;
                 }
 
                 if (dte.Solution == null || string.IsNullOrWhiteSpace(dte.Solution.FullName))
@@ -196,64 +193,117 @@ namespace PublishExtension.Commands
 
             try
             {
-                LogDebug(debugEnabled, $"开始发布项目: {project.Name}");
-
-                // 确认发布配置
-                var confirmResult = VsShellUtilities.ShowMessageBox(
-                    package,
-                    $"即将发布 {project.Name}\n\n请确保在发布对话框中选择了「ARM64」配置。\n\n是否继续？",
-                    "确认发布配置",
-                    OLEMSGICON.OLEMSGICON_QUERY,
-                    OLEMSGBUTTON.OLEMSGBUTTON_YESNO,
-                    OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
-
-                if (confirmResult != (int)VSConstants.MessageBoxResult.IDYES)
+                // 获取项目文件路径
+                var projectPath = string.Empty;
+                if (!string.IsNullOrEmpty(project.FullName))
                 {
-                    LogDebug(debugEnabled, $"用户取消发布: {project.Name}");
+                    projectPath = project.FullName;
+                }
+                else if (project.Properties != null)
+                {
+                    try
+                    {
+                        var fullPathProp = project.Properties.Item("FullPath");
+                        if (fullPathProp != null)
+                            projectPath = fullPathProp.Value as string;
+                    }
+                    catch { }
+                }
+
+                if (string.IsNullOrEmpty(projectPath) || !System.IO.File.Exists(projectPath))
+                {
+                    await LogOutputAsync(package, $"无法找到项目文件: {project.Name}");
                     return false;
                 }
 
-                // 选中项目
-                SelectProjectInSolutionExplorer(project);
+                var solutionDir = System.IO.Path.GetDirectoryName(dte.Solution.FullName);
+                var workingDir = System.IO.Path.GetDirectoryName(projectPath);
 
-                // 使用 TaskCompletionSource 等待构建完成事件
-                var tcs = new System.Threading.Tasks.TaskCompletionSource<bool>();
+                await LogOutputAsync(package, $"正在发布 {project.Name} (ARM64)...");
 
-                void onBuildDone(vsBuildScope scope, vsBuildAction action)
+                // 使用 dotnet publish 发布，指定 ARM64 配置
+                var args = $"publish \"{projectPath}\" -p:PublishProfile=ARM64 -c Release";
+
+                LogDebug(debugEnabled, $"执行: dotnet {args}");
+                LogDebug(debugEnabled, $"工作目录: {workingDir}");
+
+                return await System.Threading.Tasks.Task.Run(() =>
                 {
-                    // 只在发布动作完成时触发
-                    if (action == vsBuildAction.vsBuildActionBuild ||
-                        action == vsBuildAction.vsBuildActionRebuildAll)
+                    try
                     {
-                        var success = dte.Solution.SolutionBuild.LastBuildInfo == 0;
-                        LogDebug(debugEnabled, $"构建完成: {project.Name}, 成功={success}");
-                        tcs.TrySetResult(success);
+                        var process = new Process
+                        {
+                            StartInfo = new ProcessStartInfo
+                            {
+                                FileName = "dotnet",
+                                Arguments = args,
+                                WorkingDirectory = workingDir,
+                                UseShellExecute = false,
+                                RedirectStandardOutput = true,
+                                RedirectStandardError = true,
+                                CreateNoWindow = true
+                            }
+                        };
+
+                        process.Start();
+
+                        // 实时读取输出
+                        var outputTask = System.Threading.Tasks.Task.Run(() =>
+                        {
+                            while (!process.StandardOutput.EndOfStream)
+                            {
+                                var line = process.StandardOutput.ReadLine();
+                                if (!string.IsNullOrEmpty(line))
+                                {
+                                    LogDebug(debugEnabled, $"[{project.Name}] {line}");
+                                }
+                            }
+                        });
+
+                        var errorTask = System.Threading.Tasks.Task.Run(() =>
+                        {
+                            while (!process.StandardError.EndOfStream)
+                            {
+                                var line = process.StandardError.ReadLine();
+                                if (!string.IsNullOrEmpty(line))
+                                {
+                                    LogDebug(debugEnabled, $"[{project.Name} ERROR] {line}");
+                                }
+                            }
+                        });
+
+                        process.WaitForExit(300000); // 最多 5 分钟
+
+                        if (!process.HasExited)
+                        {
+                            process.Kill();
+                            LogDebug(debugEnabled, $"发布超时: {project.Name}");
+                            return false;
+                        }
+
+                        System.Threading.Tasks.Task.WaitAll(outputTask, errorTask);
+
+                        var success = process.ExitCode == 0;
+                        LogDebug(debugEnabled, $"发布完成: {project.Name}, 退出码={process.ExitCode}, 成功={success}");
+
+                        if (success)
+                        {
+                            _ = LogOutputAsync(package, $"{project.Name} 发布完成");
+                        }
+                        else
+                        {
+                            _ = LogOutputAsync(package, $"{project.Name} 发布失败 (退出码: {process.ExitCode})");
+                        }
+
+                        return success;
                     }
-                }
-
-                buildEvents.OnBuildDone += onBuildDone;
-
-                try
-                {
-                    // 执行发布命令
-                    dte.ExecuteCommand("Build.PublishSelection");
-
-                    // 等待发布完成（最多 5 分钟）
-                    var timeoutTask = System.Threading.Tasks.Task.Delay(300000);
-                    var completedTask = await System.Threading.Tasks.Task.WhenAny(tcs.Task, timeoutTask);
-
-                    if (completedTask == timeoutTask)
+                    catch (Exception ex)
                     {
-                        LogDebug(debugEnabled, $"发布超时: {project.Name}");
+                        LogDebug(debugEnabled, $"发布异常: {project.Name}, {ex.Message}");
+                        _ = LogOutputAsync(package, $"{project.Name} 发布失败: {ex.Message}");
                         return false;
                     }
-
-                    return await tcs.Task;
-                }
-                finally
-                {
-                    buildEvents.OnBuildDone -= onBuildDone;
-                }
+                });
             }
             catch (Exception ex)
             {
@@ -261,50 +311,6 @@ namespace PublishExtension.Commands
                 LogDebug(debugEnabled, $"发布异常: {ex}");
                 return false;
             }
-        }
-
-        private void SelectProjectInSolutionExplorer(Project project)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
-
-            try
-            {
-                // 激活解决方案资源管理器
-                var solutionExplorer = dte.Windows.Item(EnvDTE.Constants.vsWindowKindSolutionExplorer);
-                solutionExplorer.Activate();
-
-                // 选中项目（通过 UIHierarchy）
-                if (dte.ToolWindows.SolutionExplorer != null)
-                {
-                    var uiHierarchy = (UIHierarchy)dte.ToolWindows.SolutionExplorer;
-                    var uiHierarchyItem = FindUIHierarchyItem(uiHierarchy.UIHierarchyItems, project.Name);
-                    uiHierarchyItem?.Select(vsUISelectionType.vsUISelectionTypeSelect);
-                }
-            }
-            catch
-            {
-                // 如果选中失败，仍然继续发布
-            }
-        }
-
-        private UIHierarchyItem FindUIHierarchyItem(UIHierarchyItems items, string name)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
-
-            foreach (UIHierarchyItem item in items)
-            {
-                if (string.Equals(item.Name, name, StringComparison.Ordinal))
-                    return item;
-
-                if (item.UIHierarchyItems != null && item.UIHierarchyItems.Count > 0)
-                {
-                    var found = FindUIHierarchyItem(item.UIHierarchyItems, name);
-                    if (found != null)
-                        return found;
-                }
-            }
-
-            return null;
         }
 
         private static void LogDebug(bool debugEnabled, string message)
