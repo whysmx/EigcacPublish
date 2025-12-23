@@ -22,10 +22,8 @@ namespace PublishExtension
         public const string PackageGuidString = "f0836e0b-8b15-4d6d-a73f-37e4a7b31eb9";
         private const string MenuTag = "EigcacPublishMenu";
         private const string MenuButtonTag = "EigcacPublishButton";
-        private const string ToolbarButtonTag = "EigcacPublishToolbarButton";
 
         private CommandBarButton menuButton;
-        private CommandBarButton toolbarButton;
 
         protected override async System.Threading.Tasks.Task InitializeAsync(
             CancellationToken cancellationToken,
@@ -52,9 +50,10 @@ namespace PublishExtension
                 LogCommandName(cmdNameMapping, PublishCommand.CommandSet, PublishCommand.CommandId);
                 LogCommandName(cmdNameMapping, PublishCommand.CommandSet, PublishCommand.CommandProjectId);
                 LogCommandName(cmdNameMapping, PublishCommand.CommandSet, PublishCommand.CommandSolutionId);
+                LogCommandName(cmdNameMapping, PublishCommand.CommandSet, PublishCommand.CommandToolbarId);
             }
             await EnsureTopLevelMenuAsync();
-            await EnsureToolbarButtonAsync();
+            // 工具栏按钮现在通过 VSCT 声明式添加，不再需要运行时动态创建
             try
             {
                 ActivityLog.LogInformation("PublishExtension", "包已初始化，准备加载菜单与命令。");
@@ -146,55 +145,6 @@ namespace PublishExtension
             catch (Exception ex)
             {
                 ActivityLog.LogInformation("PublishExtension", $"创建顶部菜单失败: {ex.Message}");
-            }
-        }
-
-        private async System.Threading.Tasks.Task EnsureToolbarButtonAsync()
-        {
-            var dte = await GetServiceAsync(typeof(DTE)) as DTE2;
-            if (dte == null)
-            {
-                ActivityLog.LogInformation("PublishExtension", "无法获取 DTE，跳过工具栏按钮创建。");
-                return;
-            }
-
-            try
-            {
-                var commandBars = dte.CommandBars as CommandBars;
-                var standardBar = commandBars?["Standard"];
-                if (standardBar == null)
-                {
-                    ActivityLog.LogInformation("PublishExtension", "未找到 Standard 工具栏，跳过按钮创建。");
-                    return;
-                }
-
-                CommandBarButton button = null;
-                foreach (CommandBarControl control in standardBar.Controls)
-                {
-                    if (control is CommandBarButton buttonControl && string.Equals(buttonControl.Tag, ToolbarButtonTag, StringComparison.Ordinal))
-                    {
-                        button = buttonControl;
-                        break;
-                    }
-                }
-
-                if (button == null)
-                {
-                    button = (CommandBarButton)standardBar.Controls.Add(MsoControlType.msoControlButton, Type.Missing, Type.Missing, standardBar.Controls.Count + 1, true);
-                    button.Caption = "Eigcac发布";
-                    button.Tag = ToolbarButtonTag;
-                    button.TooltipText = "执行发布";
-                }
-
-                button.Visible = true;
-                button.Enabled = true;
-                toolbarButton = button;
-                toolbarButton.Click += OnMenuButtonClick;
-                ActivityLog.LogInformation("PublishExtension", "已创建工具栏按钮 Eigcac发布。");
-            }
-            catch (Exception ex)
-            {
-                ActivityLog.LogInformation("PublishExtension", $"创建工具栏按钮失败: {ex.Message}");
             }
         }
 

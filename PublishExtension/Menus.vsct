@@ -14,6 +14,10 @@
       <Group guid="guidPublishExtensionPackageCmdSet" id="SolutionContextGroup" priority="0x0600">
         <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_SOLNNODE" />
       </Group>
+      <!-- 工具栏按钮组：父级为标准工具栏的运行/生成组 -->
+      <Group guid="guidPublishExtensionPackageCmdSet" id="ToolbarGroup" priority="0x0100">
+        <Parent guid="guidSHLMainMenu" id="IDG_VS_TOOLSB_RUNBUILD" />
+      </Group>
     </Groups>
 
     <Buttons>
@@ -44,6 +48,16 @@
           <ToolTip>拉取 TFS 最新代码并发布后端与前端</ToolTip>
         </Strings>
       </Button>
+      <!-- 标准工具栏按钮 -->
+      <Button guid="guidPublishExtensionPackageCmdSet" id="PublishCommandToolbarId" priority="0x0100" type="Button">
+        <Parent guid="guidPublishExtensionPackageCmdSet" id="ToolbarGroup" />
+        <Icon guid="guidImages" id="PublishIcon" />
+        <Strings>
+          <ButtonText>Eigcac发布</ButtonText>
+          <CommandName>Eigcac发布</CommandName>
+          <ToolTip>拉取 TFS 最新代码并发布后端与前端</ToolTip>
+        </Strings>
+      </Button>
     </Buttons>
 
     <Bitmaps>
@@ -61,9 +75,11 @@
       <IDSymbol name="MyMenuGroup" value="0x1020" />
       <IDSymbol name="ProjectMenuGroup" value="0x1021" />
       <IDSymbol name="SolutionContextGroup" value="0x1022" />
+      <IDSymbol name="ToolbarGroup" value="0x1023" />
       <IDSymbol name="PublishCommandId" value="0x0100" />
       <IDSymbol name="PublishCommandProjectId" value="0x0101" />
       <IDSymbol name="PublishCommandSolutionId" value="0x0102" />
+      <IDSymbol name="PublishCommandToolbarId" value="0x0103" />
     </GuidSymbol>
     <GuidSymbol name="guidImages" value="{737E1A95-5622-4855-9870-83A28649C0BD}">
       <IDSymbol name="PublishIcon" value="1" />
