@@ -13,9 +13,6 @@ namespace PublishExtension.Commands
     internal sealed class PublishCommand
     {
         public const int CommandId = 0x0100;
-        public const int CommandProjectId = 0x0101;
-        public const int CommandSolutionId = 0x0102;
-        public const int CommandToolbarId = 0x0103;
         public static readonly Guid CommandSet = new Guid("03000478-b1b7-4e82-9211-4a682be19a8c");
 
         private static PublishCommand instance;
@@ -30,9 +27,6 @@ namespace PublishExtension.Commands
             instance = this;
 
             AddCommand(commandService, CommandId);
-            AddCommand(commandService, CommandProjectId);
-            AddCommand(commandService, CommandSolutionId);
-            AddCommand(commandService, CommandToolbarId);
         }
 
         public static async System.Threading.Tasks.Task InitializeAsync(AsyncPackage package)

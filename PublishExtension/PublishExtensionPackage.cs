@@ -48,12 +48,8 @@ namespace PublishExtension
             if (cmdNameMapping != null)
             {
                 LogCommandName(cmdNameMapping, PublishCommand.CommandSet, PublishCommand.CommandId);
-                LogCommandName(cmdNameMapping, PublishCommand.CommandSet, PublishCommand.CommandProjectId);
-                LogCommandName(cmdNameMapping, PublishCommand.CommandSet, PublishCommand.CommandSolutionId);
-                LogCommandName(cmdNameMapping, PublishCommand.CommandSet, PublishCommand.CommandToolbarId);
             }
             await EnsureTopLevelMenuAsync();
-            // 工具栏按钮现在通过 VSCT 声明式添加，不再需要运行时动态创建
             try
             {
                 ActivityLog.LogInformation("PublishExtension", "包已初始化，准备加载菜单与命令。");
