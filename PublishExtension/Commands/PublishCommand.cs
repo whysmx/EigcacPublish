@@ -198,6 +198,21 @@ namespace PublishExtension.Commands
             {
                 LogDebug(debugEnabled, $"开始发布项目: {project.Name}");
 
+                // 确认发布配置
+                var confirmResult = VsShellUtilities.ShowMessageBox(
+                    package,
+                    $"即将发布 {project.Name}\n\n请确保在发布对话框中选择了「ARM64」配置。\n\n是否继续？",
+                    "确认发布配置",
+                    OLEMSGICON.OLEMSGICON_QUERY,
+                    OLEMSGBUTTON.OLEMSGBUTTON_YESNO,
+                    OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
+
+                if (confirmResult != (int)VSConstants.MessageBoxResult.IDYES)
+                {
+                    LogDebug(debugEnabled, $"用户取消发布: {project.Name}");
+                    return false;
+                }
+
                 // 选中项目
                 SelectProjectInSolutionExplorer(project);
 
