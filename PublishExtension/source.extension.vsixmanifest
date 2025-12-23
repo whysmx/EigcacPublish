@@ -5,7 +5,7 @@
                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <Metadata>
     <Identity Id="PublishExtension.7154A2F0-BBA8-4683-8250-B76CC5B591F0"
-              Version="1.0.0"
+              Version="1.0.1"
               Language="zh-CN"
               Publisher="Eigcac" />
     <DisplayName>发布</DisplayName>
