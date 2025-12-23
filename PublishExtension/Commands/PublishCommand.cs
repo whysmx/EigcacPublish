@@ -225,7 +225,7 @@ namespace PublishExtension.Commands
                     if (action == vsBuildAction.vsBuildActionBuild ||
                         action == vsBuildAction.vsBuildActionRebuildAll)
                     {
-                        var success = dte.SolutionBuild.LastBuildInfo == 0;
+                        var success = dte.Solution.SolutionBuild.LastBuildInfo == 0;
                         LogDebug(debugEnabled, $"构建完成: {project.Name}, 成功={success}");
                         tcs.TrySetResult(success);
                     }
@@ -278,7 +278,7 @@ namespace PublishExtension.Commands
                 {
                     var uiHierarchy = (UIHierarchy)dte.ToolWindows.SolutionExplorer;
                     var uiHierarchyItem = FindUIHierarchyItem(uiHierarchy.UIHierarchyItems, project.Name);
-                    uiHierarchyItem?.Select(vsUISelectionType.vsUISelectionTypeSelectUIHierarchyItem);
+                    uiHierarchyItem?.Select(vsUISelectionType.vsUISelectionTypeSelect);
                 }
             }
             catch
