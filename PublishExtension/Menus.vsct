@@ -27,7 +27,7 @@
         <Strings>
           <ButtonText>Eigcac发布</ButtonText>
           <CommandName>Eigcac发布</CommandName>
-          <ToolTip>拉取 TFS 最新代码并发布后端与前端</ToolTip>
+          <ToolTip>发布 Eigcac.Main 和 Eigcac.BSServer</ToolTip>
         </Strings>
       </Button>
       <Button guid="guidPublishExtensionPackageCmdSet" id="PublishCommandProjectId" priority="0x0100" type="Button">
@@ -36,7 +36,7 @@
         <Strings>
           <ButtonText>Eigcac发布</ButtonText>
           <CommandName>Eigcac发布</CommandName>
-          <ToolTip>拉取 TFS 最新代码并发布后端与前端</ToolTip>
+          <ToolTip>发布 Eigcac.Main 和 Eigcac.BSServer</ToolTip>
         </Strings>
       </Button>
       <Button guid="guidPublishExtensionPackageCmdSet" id="PublishCommandSolutionId" priority="0x0100" type="Button">
@@ -45,7 +45,7 @@
         <Strings>
           <ButtonText>Eigcac发布</ButtonText>
           <CommandName>Eigcac发布</CommandName>
-          <ToolTip>拉取 TFS 最新代码并发布后端与前端</ToolTip>
+          <ToolTip>发布 Eigcac.Main 和 Eigcac.BSServer</ToolTip>
         </Strings>
       </Button>
       <!-- 标准工具栏按钮 -->
@@ -55,7 +55,7 @@
         <Strings>
           <ButtonText>Eigcac发布</ButtonText>
           <CommandName>Eigcac发布</CommandName>
-          <ToolTip>拉取 TFS 最新代码并发布后端与前端</ToolTip>
+          <ToolTip>发布 Eigcac.Main 和 Eigcac.BSServer</ToolTip>
         </Strings>
       </Button>
     </Buttons>
